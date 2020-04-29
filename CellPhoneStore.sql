@@ -55,10 +55,6 @@ begin
 end %%
 delimiter ;
 
-drop trigger eliminar;
-
-show triggers;
-
 --------------------------------------------------------------------------------------------------------------------------
 create table caracteristicas(
 	car_id integer primary key not null,
