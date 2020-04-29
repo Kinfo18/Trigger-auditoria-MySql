@@ -1,4 +1,4 @@
-﻿create database cellphonestore;
+create database cellphonestore;
 use cellphonestore;
 
 drop table if exists distribuidor cascade;
@@ -164,6 +164,7 @@ create table celular(
 	cel_imei integer primary key,
     cel_modelo varchar(50),
     cel_precio float,
+    cel_cantidad int,
     mar_referen integer,
     car_id integer,
     
@@ -171,11 +172,14 @@ create table celular(
     foreign key (car_id) references caracteristicas (car_id) on delete cascade on update cascade
 );
 
+drop trigger actualizar_cel
+drop table auditoria_celular
 create table auditoria_celular(
 	au_cel int primary key auto_increment,
     au_cel_imei_new integer, au_cel_imei_old integer,
     au_cel_modelo_new varchar(50), au_cel_modelo_old varchar(50),
     au_cel_precio_new float, au_cel_precio_old float,
+	au_cel_cantidad_new int, au_cel_cantidad_old int,
     au_mar_referen_new integer, au_mar_referen_old integer,
 	au_car_id_new integer, au_car_id_old integer,
     usuario varchar(90),
@@ -188,8 +192,8 @@ delimiter %%
 create trigger insertar_cel after insert on celular
 for each row
 begin 
-	insert into auditoria_celular(au_cel_imei_new, au_cel_modelo_new, au_cel_precio_new, au_mar_referen_new, au_car_id_new, usuario, fecha, hora, condicion)
-    values(new.cel_imei, new.cel_modelo, new.cel_precio, new.mar_referen, new.car_id, user(), curdate(), curtime(), 'Insertado');
+	insert into auditoria_celular(au_cel_imei_new, au_cel_modelo_new, au_cel_precio_new, au_cel_cantidad_new, au_mar_referen_new, au_car_id_new, usuario, fecha, hora, condicion)
+    values(new.cel_imei, new.cel_modelo, new.cel_precio, new.cel_cantidad, new.mar_referen, new.car_id, user(), curdate(), curtime(), 'Insertado');
 end %%
 delimiter ;
 
@@ -197,8 +201,8 @@ delimiter %%
 create trigger actualizar_cel after update on celular
 for each row
 begin 
-	insert into auditoria_celular(au_cel_imei_new, au_cel_imei_old, au_cel_modelo_new, au_cel_modelo_old, au_cel_precio_new, au_cel_precio_old, au_mar_referen_new, au_mar_referen_old, au_car_id_new, au_car_id_old, usuario, fecha, hora, condicion)
-    values(new.cel_imei, old.cel_imei, new.cel_modelo, old.cel_modelo, new.cel_precio, old.cel_precio, new.mar_referen, old.mar_referen, new.car_id, old.car_id, user(), curdate(), curtime(), 'Actualizado');
+	insert into auditoria_celular(au_cel_imei_new, au_cel_imei_old, au_cel_modelo_new, au_cel_modelo_old, au_cel_precio_new, au_cel_precio_old, au_cel_cantidad_new, au_cel_cantidad_old, au_mar_referen_new, au_mar_referen_old, au_car_id_new, au_car_id_old, usuario, fecha, hora, condicion)
+    values(new.cel_imei, old.cel_imei, new.cel_modelo, old.cel_modelo, new.cel_precio, old.cel_precio, new.cel_cantidad, old.cel_cantidad, new.mar_referen, old.mar_referen, new.car_id, old.car_id, user(), curdate(), curtime(), 'Actualizado');
 end %%
 delimiter ;
 
@@ -206,10 +210,16 @@ delimiter %%
 create trigger eliminar_cel after delete on celular
 for each row
 begin    
-	insert into auditoria_celular(au_cel_imei_new, au_cel_modelo_new, au_cel_precio_new, au_mar_referen_new, au_car_id_new, usuario, fecha, hora, condicion)
-    values(old.cel_imei, old.cel_modelo, old.cel_precio, old.mar_referen, old.car_id, user(), curdate(), curtime(), 'Eliminado');
+	insert into auditoria_celular(au_cel_imei_new, au_cel_modelo_new, au_cel_precio_new, au_cel_cantidad_new, au_mar_referen_new, au_car_id_new, usuario, fecha, hora, condicion)
+    values(old.cel_imei, old.cel_modelo, old.cel_precio, old.cel_cantidad, old.mar_referen, old.car_id, user(), curdate(), curtime(), 'Eliminado');
 end %%
 delimiter ;
+
+create table ventas(
+	ven_id integer primary key,
+    ven_precio float,
+    ven_cantidad int
+);
 --------------------------------------------------------------------------------------------------------------------------
 insert into distribuidor
 values
@@ -255,10 +265,21 @@ where mar_referen = 2003;
 
 insert into celular
 values
-( 1234556, 'Redmi note 5', 400000, 2001, 1002),
-( 1324513, 'Mate p20', 605000, 2003, 1001),
-( 1315264, 'Y9 2019', 760000, 2003, 1003),
-( 4653757, 'Samsung Galaxy Note A30', 1900000, 2002, 1002);
+( 1234556,'Redmi note 5', 400000, 43,2001, 1002),
+( 1324513,'Mate p20', 605000, 56,2003, 1001),
+( 1315264, 'Y9 2019', 760000, 2,2003, 1003),
+( 4653757, 'Samsung Galaxy Note A30', 1900000, 45,2002, 1002);
 
 --------------------------------------------------------------------------------------------------------------------------
 
+delimiter %%
+create trigger ventas after insert on ventas
+for each row
+begin 
+	update celular
+    set celular.cel_cantidad = cel_cantidad - new.ven_cantidad
+    where celular.cel_imei = new.ven_id;
+end %%
+delimiter ;
+
+insert into ventas values (1315264, 760000, 1);
